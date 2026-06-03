@@ -1,0 +1,25 @@
+{
+  "name": "prescripcion-psicosocial",
+  "version": "1.0.0",
+  "description": "Generador de Matrices de Prescripción Psicosocial - Mutual de Seguridad",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "docx": "^9.7.0",
+    "docxtemplater": "^3.68.7",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
+    "pizzip": "^3.2.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "vite": "^6.4.2"
+  }
+}
