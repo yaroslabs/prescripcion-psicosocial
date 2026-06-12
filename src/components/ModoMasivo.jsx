@@ -48,6 +48,35 @@ function slug(str) {
   return String(str || '').replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_').slice(0, 40);
 }
 
+// Los números de serie de Excel cuentan días desde 1899-12-30 (epoch 25569 = 1970-01-01 UTC)
+function excelSerialToDate(serial) {
+  const utcDays = Math.floor(serial - 25569);
+  return new Date(utcDays * 86400 * 1000);
+}
+
+function formatearFecha(date) {
+  const dd = String(date.getUTCDate()).padStart(2, '0');
+  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const yyyy = date.getUTCFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+// Acepta Date (si XLSX parseó con cellDates), número de serie, o texto ya formateado
+function parsearFechaEvaluacion(valor) {
+  let date;
+  if (valor instanceof Date) {
+    date = valor;
+  } else {
+    const serial = Number(valor);
+    if (!isNaN(serial) && serial > 0) {
+      date = excelSerialToDate(serial);
+    } else {
+      return { texto: String(valor ?? ''), anio: null };
+    }
+  }
+  return { texto: formatearFecha(date), anio: date.getUTCFullYear() };
+}
+
 function calcularDimensiones(row) {
   return SIGLAS
     .filter(({ sigla }) => {
@@ -63,7 +92,7 @@ function parsearExcel(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const wb   = XLSX.read(e.target.result, { type: 'array' });
+        const wb   = XLSX.read(e.target.result, { type: 'array', cellDates: true });
         const ws   = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
         resolve(rows);
@@ -90,10 +119,13 @@ export default function ModoMasivo() {
     try {
       const rows = await parsearExcel(file);
       setFilas(
-        rows.map((row, i) => ({
+        rows.map((row, i) => {
+          const fechaEval = parsearFechaEvaluacion(row['Fecha Evaluación']);
+          return {
           _n:                    i + 1,
           cuv:                   String(row['CUV']                         ?? ''),
-          fechaEvaluacion:       String(row['Fecha Evaluación']            ?? ''),
+          fechaEvaluacion:       fechaEval.texto,
+          fechaEvaluacionAnio:   fechaEval.anio,
           rutEmpresa:            String(row['Rut Empleador']               ?? ''),
           nombreEmpresa:         String(row['Razón Social ']               ?? ''),
           nombreCT:              String(row['Nombre Centro de Trabajo']    ?? ''),
@@ -109,7 +141,8 @@ export default function ModoMasivo() {
             return 'Sin datos';
           })(),
           dimensionesSeleccionadas: calcularDimensiones(row),
-        }))
+          };
+        })
       );
     } catch (err) {
       setError('Error al leer el archivo: ' + err.message);
@@ -153,7 +186,7 @@ export default function ModoMasivo() {
 
       try {
         const blob   = await generarMatriz(formData, { returnBlob: true });
-        const anioEval = new Date(Math.round((Number(fila.fechaEvaluacion) - 25569) * 86400 * 1000)).getFullYear();
+        const anioEval = fila.fechaEvaluacionAnio;
         const nombre = `Matriz_${slug(fila.nombreEmpresa)}_Centro_${slug(fila.nombreCT)}_CUV_${fila.cuv}_Evaluacion_${anioEval}_Riesgo_${slug(fila.nivelRiesgoCT)}${fila.ot ? `_OT_${fila.ot}` : ''}.docx`;
         zip.file(nombre, blob);
       } catch (err) {
@@ -172,6 +205,24 @@ export default function ModoMasivo() {
 
   return (
     <div>
+      <div className="masivo-banner">
+        <div className="masivo-banner-texto">
+          <span className="masivo-banner-icono">📊</span>
+          <p>
+            Descarga un archivo base de datos de prueba para que puedas probar la generación
+            masiva de matrices. Simplemente descarga el archivo y súbelo en el botón
+            «Importar Excel».
+          </p>
+        </div>
+        <a
+          href="/plantilla-masiva.xlsx"
+          download
+          className="btn btn-secondary masivo-banner-btn"
+        >
+          ⬇️ Descargar plantilla Excel
+        </a>
+      </div>
+
       <section className="card">
         <h2 className="section-title">
           <span className="section-num">1</span> Datos del Profesional

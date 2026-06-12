@@ -421,6 +421,45 @@ select {
   color: var(--blanco);
 }
 
+/* ===== Banner descarga plantilla (modo masivo) ===== */
+.masivo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #eaf2fb;
+  border: 1.5px solid #aed6f1;
+  border-radius: var(--radio);
+  padding: 14px 18px;
+  flex-wrap: wrap;
+}
+
+.masivo-banner-texto {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.masivo-banner-icono {
+  font-size: 28px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.masivo-banner-texto p {
+  font-size: 13.5px;
+  color: var(--azul);
+  line-height: 1.5;
+}
+
+.masivo-banner-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
 /* ===== Tabla previa (modo masivo) ===== */
 .tabla-scroll {
   overflow-x: auto;
