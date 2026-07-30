@@ -4,7 +4,11 @@ import FormProfesional from './components/FormProfesional.jsx';
 import SelectorDimensiones from './components/SelectorDimensiones.jsx';
 import BotonGenerar from './components/BotonGenerar.jsx';
 import ModoMasivo from './components/ModoMasivo.jsx';
+import EditorMedidas from './components/EditorMedidas.jsx';
 import { generarMatriz } from './utils/generateDoc.js';
+import { resolverMedidas } from './utils/resolverMedidas.js';
+import { obtenerFuenteActiva } from './utils/customMedidasSource.js';
+import { leerMedidasPersonalizadas, borrarMedidasPersonalizadas } from './utils/medidasPersonalizadasStorage.js';
 import { validarDatos } from './utils/validation.js';
 
 const EMPRESA_INICIAL = {
@@ -38,6 +42,24 @@ export default function App() {
   const [dimensionPolitica, setDimensionPolitica] = useState('');
   const [cargando, setCargando] = useState(false);
   const [mensajes, setMensajes] = useState({ error: '', exito: '' });
+  const [mostrarEditorMedidas, setMostrarEditorMedidas] = useState(false);
+  const [tieneMedidasPersonalizadas, setTieneMedidasPersonalizadas] = useState(
+    () => leerMedidasPersonalizadas() !== null
+  );
+
+  const handleCerrarEditorMedidas = () => {
+    setMostrarEditorMedidas(false);
+    setTieneMedidasPersonalizadas(leerMedidasPersonalizadas() !== null);
+  };
+
+  const handleVolverTradicional = () => {
+    const confirmado = window.confirm(
+      '¿Deseas eliminar todas las personalizaciones de las medidas y volver al formato tradicional. Esta acción no se puede deshacer.'
+    );
+    if (!confirmado) return;
+    borrarMedidasPersonalizadas();
+    setTieneMedidasPersonalizadas(false);
+  };
 
   const handleGenerar = async () => {
     setMensajes({ error: '', exito: '' });
@@ -54,18 +76,22 @@ export default function App() {
     }
     setCargando(true);
     try {
-      await generarMatriz({
-        ...datosEmpresa,
-        ...datosProfesional,
-        dimensionesSeleccionadas,
-        politicaRPSL,
-        dimensionPolitica,
-        nombrequienfirma: datosProfesional.nombre,
-        apellidopatQF: datosProfesional.apellidoPaterno,
-        apellidomatQF: datosProfesional.apellidoMaterno,
-        rutQF: datosProfesional.rut,
-        emailQF: datosProfesional.email,
-      });
+      const resolvedMedidas = resolverMedidas({ dimensionesSeleccionadas, politicaRPSL }, obtenerFuenteActiva());
+      await generarMatriz(
+        {
+          ...datosEmpresa,
+          ...datosProfesional,
+          dimensionesSeleccionadas,
+          politicaRPSL,
+          dimensionPolitica,
+          nombrequienfirma: datosProfesional.nombre,
+          apellidopatQF: datosProfesional.apellidoPaterno,
+          apellidomatQF: datosProfesional.apellidoMaterno,
+          rutQF: datosProfesional.rut,
+          emailQF: datosProfesional.email,
+        },
+        resolvedMedidas
+      );
       setMensajes({ error: '', exito: 'Documento generado y descargado exitosamente.' });
     } catch (e) {
       setMensajes({ error: `Error al generar el documento: ${e.message}`, exito: '' });
@@ -95,8 +121,33 @@ export default function App() {
             <h1 className="header-title">Prescripción Psicosocial</h1>
             <p className="header-sub">Generador de Matrices de Diseño de Medidas de Intervención</p>
           </div>
+          <div className="header-acciones">
+            <span className={`estado-medidas-badge ${tieneMedidasPersonalizadas ? 'ajustada' : 'tradicional'}`}>
+              {tieneMedidasPersonalizadas ? 'Matriz ajustada' : 'Tradicional'}
+            </span>
+            <button
+              type="button"
+              className="btn-volver-tradicional"
+              onClick={handleVolverTradicional}
+              disabled={!tieneMedidasPersonalizadas}
+              title={tieneMedidasPersonalizadas ? undefined : 'No hay personalizaciones que restaurar'}
+            >
+              Volver a matriz sin ajustes
+            </button>
+            <button
+              type="button"
+              className="btn-ajustar-medidas"
+              onClick={() => setMostrarEditorMedidas(true)}
+            >
+              Ajustar medidas
+            </button>
+          </div>
         </div>
       </header>
+
+      {mostrarEditorMedidas && (
+        <EditorMedidas onClose={handleCerrarEditorMedidas} />
+      )}
 
       <main className="app-main">
         {/* Tabs */}

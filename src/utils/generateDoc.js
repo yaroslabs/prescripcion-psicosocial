@@ -2,40 +2,23 @@ import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
 import { saveAs } from 'file-saver';
 import templateUrl from '../assets/plantilla.docx?url';
-import { MEDIDAS_POR_DIMENSION, POLITICA_RPSL } from './medidas.js';
 
-export async function generarMatriz(formData, { returnBlob = false } = {}) {
-  // Construir array de medidas con folio incremental
-  const medidas = [];
-  let folio = 1;
-
-  for (const id of (formData.dimensionesSeleccionadas ?? [])) {
-    for (const m of (MEDIDAS_POR_DIMENSION[id] ?? [])) {
-      medidas.push({
-        FolioMedida:           folio++,
-        DimensionMedida:       m.dimension,
-        medidaprescrita:       m.medida,
-        porcentajeriesgomedio: '',
-        porcentajeriesgoalto:  '',
-        preguntasmayorpuntaje: '',
-        'explicación':         '',
-        'Fechaimplementación': '',
-      });
-    }
-  }
-
-  if (formData.politicaRPSL === 'si') {
-    medidas.push({
-      FolioMedida:           folio++,
-      DimensionMedida:       POLITICA_RPSL.dimension,
-      medidaprescrita:       POLITICA_RPSL.medida,
-      porcentajeriesgomedio: '',
-      porcentajeriesgoalto:  '',
-      preguntasmayorpuntaje: '',
-      'explicación':         '',
-      'Fechaimplementación': '',
-    });
-  }
+/**
+ * @param {object} formData
+ * @param {{dimensionId: string, dimensionNombre: string, medida: string, origen: string}[]} resolvedMedidas
+ * @param {{returnBlob?: boolean}} [options]
+ */
+export async function generarMatriz(formData, resolvedMedidas, { returnBlob = false } = {}) {
+  const medidas = resolvedMedidas.map((r, i) => ({
+    FolioMedida:           i + 1,
+    DimensionMedida:       r.dimensionNombre,
+    medidaprescrita:       r.medida,
+    porcentajeriesgomedio: '',
+    porcentajeriesgoalto:  '',
+    preguntasmayorpuntaje: '',
+    'explicación':         '',
+    'Fechaimplementación': '',
+  }));
 
   const response = await fetch(templateUrl);
   const arrayBuffer = await response.arrayBuffer();
@@ -46,7 +29,6 @@ export async function generarMatriz(formData, { returnBlob = false } = {}) {
     paragraphLoop: true,
     linebreaks: true,
   });
-console.log('Medidas a renderizar:', medidas.length, medidas);
   doc.render({
     FechaDocumento: formData.fechaDocumento ?? '',
     NDocumento:     formData.nDocumento     ?? '',

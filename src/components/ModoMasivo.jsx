@@ -4,6 +4,8 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import FormProfesional from './FormProfesional.jsx';
 import { generarMatriz } from '../utils/generateDoc.js';
+import { resolverMedidas } from '../utils/resolverMedidas.js';
+import { obtenerFuenteActiva } from '../utils/customMedidasSource.js';
 
 const SIGLAS = [
   { sigla: 'CT', id: 'carga_trabajo' },
@@ -155,6 +157,7 @@ export default function ModoMasivo() {
     const zip   = new JSZip();
     const total = filas.length;
     const hoy   = fechaHoy();
+    const fuenteMedidas = obtenerFuenteActiva();
 
     for (let i = 0; i < filas.length; i++) {
       setProgreso({ actual: i + 1, total });
@@ -185,7 +188,11 @@ export default function ModoMasivo() {
       };
 
       try {
-        const blob   = await generarMatriz(formData, { returnBlob: true });
+        const resolvedMedidas = resolverMedidas(
+          { dimensionesSeleccionadas: fila.dimensionesSeleccionadas, politicaRPSL: 'si' },
+          fuenteMedidas
+        );
+        const blob   = await generarMatriz(formData, resolvedMedidas, { returnBlob: true });
         const anioEval = fila.fechaEvaluacionAnio;
         const nombre = `Matriz_${slug(fila.nombreEmpresa)}_Centro_${slug(fila.nombreCT)}_CUV_${fila.cuv}_Evaluacion_${anioEval}_Riesgo_${slug(fila.nivelRiesgoCT)}${fila.ot ? `_OT_${fila.ot}` : ''}.docx`;
         zip.file(nombre, blob);
