@@ -5,10 +5,15 @@ import SelectorDimensiones from './components/SelectorDimensiones.jsx';
 import BotonGenerar from './components/BotonGenerar.jsx';
 import ModoMasivo from './components/ModoMasivo.jsx';
 import EditorMedidas from './components/EditorMedidas.jsx';
+import ModalConfiguracionMatriz from './components/ModalConfiguracionMatriz.jsx';
 import { generarMatriz } from './utils/generateDoc.js';
 import { resolverMedidas } from './utils/resolverMedidas.js';
 import { obtenerFuenteActiva } from './utils/customMedidasSource.js';
+import { obtenerPreguntasPorDimension } from './utils/preguntasSource.js';
 import { leerMedidasPersonalizadas, borrarMedidasPersonalizadas } from './utils/medidasPersonalizadasStorage.js';
+import { leerExplicaciones } from './utils/explicacionesStorage.js';
+import { leerResponsables } from './utils/responsablesStorage.js';
+import { leerRepresentanteEmpresa } from './utils/representanteEmpresaStorage.js';
 import { validarDatos } from './utils/validation.js';
 
 const EMPRESA_INICIAL = {
@@ -43,6 +48,7 @@ export default function App() {
   const [cargando, setCargando] = useState(false);
   const [mensajes, setMensajes] = useState({ error: '', exito: '' });
   const [mostrarEditorMedidas, setMostrarEditorMedidas] = useState(false);
+  const [mostrarConfiguracionMatriz, setMostrarConfiguracionMatriz] = useState(false);
   const [tieneMedidasPersonalizadas, setTieneMedidasPersonalizadas] = useState(
     () => leerMedidasPersonalizadas() !== null
   );
@@ -77,6 +83,11 @@ export default function App() {
     setCargando(true);
     try {
       const resolvedMedidas = resolverMedidas({ dimensionesSeleccionadas, politicaRPSL }, obtenerFuenteActiva());
+      const preguntasPorDimension = await obtenerPreguntasPorDimension();
+      const explicacionesPorDimension = leerExplicaciones();
+      const fechaImplementacionPorDimension = leerMedidasPersonalizadas()?.fechasImplementacion ?? {};
+      const { responsableMonitoreo, dptoResponsable } = leerResponsables();
+      const representanteEmpresa = leerRepresentanteEmpresa();
       await generarMatriz(
         {
           ...datosEmpresa,
@@ -90,7 +101,15 @@ export default function App() {
           rutQF: datosProfesional.rut,
           emailQF: datosProfesional.email,
         },
-        resolvedMedidas
+        resolvedMedidas,
+        {
+          preguntasPorDimension,
+          explicacionesPorDimension,
+          fechaImplementacionPorDimension,
+          responsableMonitoreo,
+          dptoResponsable,
+          representanteEmpresa,
+        }
       );
       setMensajes({ error: '', exito: 'Documento generado y descargado exitosamente.' });
     } catch (e) {
@@ -99,18 +118,6 @@ export default function App() {
       setCargando(false);
     }
   };
-
-  const formularioCompleto =
-    datosEmpresa.rutEmpresa &&
-    datosEmpresa.nombreEmpresa &&
-    datosEmpresa.nombreCT &&
-    datosEmpresa.dotacionTotal &&
-    datosProfesional.nombre &&
-    datosProfesional.apellidoPaterno &&
-    datosProfesional.rut &&
-    datosProfesional.email &&
-    dimensionesSeleccionadas.length > 0 &&
-    (politicaRPSL === 'no' || (politicaRPSL === 'si' && dimensionPolitica));
 
   return (
     <div className="app-container">
@@ -141,12 +148,23 @@ export default function App() {
             >
               Ajustar medidas
             </button>
+            <button
+              type="button"
+              className="btn-ajustar-medidas"
+              onClick={() => setMostrarConfiguracionMatriz(true)}
+            >
+              Configuración de la Matriz
+            </button>
           </div>
         </div>
       </header>
 
       {mostrarEditorMedidas && (
         <EditorMedidas onClose={handleCerrarEditorMedidas} />
+      )}
+
+      {mostrarConfiguracionMatriz && (
+        <ModalConfiguracionMatriz onClose={() => setMostrarConfiguracionMatriz(false)} />
       )}
 
       <main className="app-main">
@@ -216,7 +234,6 @@ export default function App() {
               <BotonGenerar
                 onClick={handleGenerar}
                 cargando={cargando}
-                habilitado={formularioCompleto}
               />
             </section>
           </>

@@ -79,5 +79,10 @@ export function filasAaSnapshot(filas, snapshotActual) {
     throw new Error('No se encontró ninguna medida válida en el archivo.');
   }
 
-  return { snapshot: { medidasPorDimension, politicaRPSL }, advertencias };
+  // El Excel de medidas no representa fechas de implementación: se preservan
+  // las que ya estaban guardadas en el snapshot base, sin tocarlas.
+  return {
+    snapshot: { medidasPorDimension, politicaRPSL, fechasImplementacion: snapshotActual.fechasImplementacion },
+    advertencias,
+  };
 }

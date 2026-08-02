@@ -154,6 +154,7 @@ label .req { color: #c0392b; margin-left: 2px; }
 input[type="text"],
 input[type="email"],
 input[type="number"],
+input[type="date"],
 select {
   width: 100%;
   padding: 9px 12px;

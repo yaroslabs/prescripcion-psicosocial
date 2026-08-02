@@ -6,21 +6,14 @@ import FormProfesional from './FormProfesional.jsx';
 import { generarMatriz } from '../utils/generateDoc.js';
 import { resolverMedidas } from '../utils/resolverMedidas.js';
 import { obtenerFuenteActiva } from '../utils/customMedidasSource.js';
-
-const SIGLAS = [
-  { sigla: 'CT', id: 'carga_trabajo' },
-  { sigla: 'EM', id: 'exigencias_emocionales' },
-  { sigla: 'DP', id: 'desarrollo_profesional' },
-  { sigla: 'RC', id: 'reconocimiento_claridad_rol' },
-  { sigla: 'CR', id: 'conflicto_rol' },
-  { sigla: 'QL', id: 'calidad_liderazgo' },
-  { sigla: 'CM', id: 'companerismo' },
-  { sigla: 'IT', id: 'inseguridad_condiciones' },
-  { sigla: 'TV', id: 'equilibrio_trabajo_vida' },
-  { sigla: 'CJ', id: 'confianza_justicia' },
-  { sigla: 'VU', id: 'vulnerabilidad' },
-  { sigla: 'VA', id: 'violencia_acoso' },
-];
+import { leerMedidasPersonalizadas } from '../utils/medidasPersonalizadasStorage.js';
+import { DIMENSION_CODIGOS } from '../utils/dimensionCodigos.js';
+import { excelSerialToDate, formatearFechaUTC, fechaHoy } from '../utils/fechas.js';
+import { obtenerPreguntasPorDimension } from '../utils/preguntasSource.js';
+import { calcularRiesgoPorDimension } from '../utils/riesgoDimensiones.js';
+import { leerExplicaciones } from '../utils/explicacionesStorage.js';
+import { leerResponsables } from '../utils/responsablesStorage.js';
+import { leerRepresentanteEmpresa } from '../utils/representanteEmpresaStorage.js';
 
 const DIM_NOMBRE = {
   carga_trabajo:              'Carga de Trabajo',
@@ -41,26 +34,8 @@ const PROFESIONAL_INICIAL = {
   nombre: '', apellidoPaterno: '', apellidoMaterno: '', rut: '', email: '',
 };
 
-function fechaHoy() {
-  const d = new Date();
-  return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-}
-
 function slug(str) {
   return String(str || '').replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_').slice(0, 40);
-}
-
-// Los números de serie de Excel cuentan días desde 1899-12-30 (epoch 25569 = 1970-01-01 UTC)
-function excelSerialToDate(serial) {
-  const utcDays = Math.floor(serial - 25569);
-  return new Date(utcDays * 86400 * 1000);
-}
-
-function formatearFecha(date) {
-  const dd = String(date.getUTCDate()).padStart(2, '0');
-  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const yyyy = date.getUTCFullYear();
-  return `${dd}/${mm}/${yyyy}`;
 }
 
 // Acepta Date (si XLSX parseó con cellDates), número de serie, o texto ya formateado
@@ -76,17 +51,17 @@ function parsearFechaEvaluacion(valor) {
       return { texto: String(valor ?? ''), anio: null };
     }
   }
-  return { texto: formatearFecha(date), anio: date.getUTCFullYear() };
+  return { texto: formatearFechaUTC(date), anio: date.getUTCFullYear() };
 }
 
 function calcularDimensiones(row) {
-  return SIGLAS
-    .filter(({ sigla }) => {
-      const alto  = parseFloat(row[`Alto ${sigla}`]  ?? 0) || 0;
-      const medio = parseFloat(row[`Medio ${sigla}`] ?? 0) || 0;
+  return DIMENSION_CODIGOS
+    .filter(({ codigo }) => {
+      const alto  = parseFloat(row[`Alto ${codigo}`]  ?? 0) || 0;
+      const medio = parseFloat(row[`Medio ${codigo}`] ?? 0) || 0;
       return alto >= 50 || medio >= 50;
     })
-    .map(({ id }) => id);
+    .map(({ dimensionId }) => dimensionId);
 }
 
 function parsearExcel(file) {
@@ -143,6 +118,7 @@ export default function ModoMasivo() {
             return 'Sin datos';
           })(),
           dimensionesSeleccionadas: calcularDimensiones(row),
+          riesgoPorDimension:    calcularRiesgoPorDimension(row),
           };
         })
       );
@@ -158,6 +134,11 @@ export default function ModoMasivo() {
     const total = filas.length;
     const hoy   = fechaHoy();
     const fuenteMedidas = obtenerFuenteActiva();
+    const preguntasPorDimension = await obtenerPreguntasPorDimension();
+    const explicacionesPorDimension = leerExplicaciones();
+    const fechaImplementacionPorDimension = leerMedidasPersonalizadas()?.fechasImplementacion ?? {};
+    const { responsableMonitoreo, dptoResponsable } = leerResponsables();
+    const representanteEmpresa = leerRepresentanteEmpresa();
 
     for (let i = 0; i < filas.length; i++) {
       setProgreso({ actual: i + 1, total });
@@ -192,7 +173,16 @@ export default function ModoMasivo() {
           { dimensionesSeleccionadas: fila.dimensionesSeleccionadas, politicaRPSL: 'si' },
           fuenteMedidas
         );
-        const blob   = await generarMatriz(formData, resolvedMedidas, { returnBlob: true });
+        const blob   = await generarMatriz(formData, resolvedMedidas, {
+          returnBlob: true,
+          preguntasPorDimension,
+          riesgoPorDimension: fila.riesgoPorDimension,
+          explicacionesPorDimension,
+          fechaImplementacionPorDimension,
+          responsableMonitoreo,
+          dptoResponsable,
+          representanteEmpresa,
+        });
         const anioEval = fila.fechaEvaluacionAnio;
         const nombre = `Matriz_${slug(fila.nombreEmpresa)}_Centro_${slug(fila.nombreCT)}_CUV_${fila.cuv}_Evaluacion_${anioEval}_Riesgo_${slug(fila.nivelRiesgoCT)}${fila.ot ? `_OT_${fila.ot}` : ''}.docx`;
         zip.file(nombre, blob);

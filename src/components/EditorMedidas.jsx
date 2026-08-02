@@ -7,6 +7,7 @@ import {
   borrarMedidasPersonalizadas,
 } from '../utils/medidasPersonalizadasStorage.js';
 import { exportarMedidasAExcel, importarMedidasDesdeExcel } from '../utils/medidasExcel.js';
+import { sumarAnios, formatearFechaISO } from '../utils/fechas.js';
 
 const POLITICA_KEY = '__politica__';
 
@@ -19,11 +20,20 @@ export default function EditorMedidas({ onClose }) {
   const fileRef = useRef();
 
   const medidasActivas = snapshot.medidasPorDimension[dimensionActiva] ?? [];
+  const fechaImplementacionPorDefecto = formatearFechaISO(sumarAnios(new Date(), 1));
+  const fechaImplementacionActiva = snapshot.fechasImplementacion?.[dimensionActiva] ?? fechaImplementacionPorDefecto;
 
   function actualizarMedidas(nuevaLista) {
     setSnapshot((prev) => ({
       ...prev,
       medidasPorDimension: { ...prev.medidasPorDimension, [dimensionActiva]: nuevaLista },
+    }));
+  }
+
+  function handleEditarFechaImplementacion(iso) {
+    setSnapshot((prev) => ({
+      ...prev,
+      fechasImplementacion: { ...(prev.fechasImplementacion ?? {}), [dimensionActiva]: iso },
     }));
   }
 
@@ -135,6 +145,14 @@ export default function EditorMedidas({ onClose }) {
               </div>
             ) : (
               <>
+                <div className="form-group editor-fecha-implementacion">
+                  <label>Fecha de implementación</label>
+                  <input
+                    type="date"
+                    value={fechaImplementacionActiva}
+                    onChange={(e) => handleEditarFechaImplementacion(e.target.value)}
+                  />
+                </div>
                 {medidasActivas.length === 0 && (
                   <p className="editor-vacio">No hay medidas en esta dimensión.</p>
                 )}

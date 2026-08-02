@@ -4,7 +4,7 @@ export default function FormProfesional({ datos, onChange }) {
   return (
     <div className="form-grid">
       <div className="form-group">
-        <label>Nombre(s) <span className="req">*</span></label>
+        <label>Nombre(s)</label>
         <input
           type="text"
           value={datos.nombre}
@@ -13,7 +13,7 @@ export default function FormProfesional({ datos, onChange }) {
         />
       </div>
       <div className="form-group">
-        <label>Apellido Paterno <span className="req">*</span></label>
+        <label>Apellido Paterno</label>
         <input
           type="text"
           value={datos.apellidoPaterno}
@@ -31,7 +31,7 @@ export default function FormProfesional({ datos, onChange }) {
         />
       </div>
       <div className="form-group">
-        <label>RUT <span className="req">*</span></label>
+        <label>RUT</label>
         <input
           type="text"
           value={datos.rut}
@@ -40,7 +40,7 @@ export default function FormProfesional({ datos, onChange }) {
         />
       </div>
       <div className="form-group full">
-        <label>Email <span className="req">*</span></label>
+        <label>Email</label>
         <input
           type="email"
           value={datos.email}

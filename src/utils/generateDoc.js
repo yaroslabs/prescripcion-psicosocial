@@ -2,22 +2,51 @@ import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
 import { saveAs } from 'file-saver';
 import templateUrl from '../assets/plantilla.docx?url';
+import { sumarAnios, formatearFechaLocal, parsearFechaISOLocal } from './fechas.js';
 
 /**
  * @param {object} formData
  * @param {{dimensionId: string, dimensionNombre: string, medida: string, origen: string}[]} resolvedMedidas
- * @param {{returnBlob?: boolean}} [options]
+ * @param {{
+ *   returnBlob?: boolean,
+ *   preguntasPorDimension?: Record<string, string>,
+ *   riesgoPorDimension?: Record<string, {alto: string, medio: string}>,
+ *   explicacionesPorDimension?: Record<string, string>,
+ *   fechaImplementacionPorDimension?: Record<string, string>,
+ *   responsableMonitoreo?: string,
+ *   dptoResponsable?: string,
+ *   representanteEmpresa?: {nombre?: string, apellidoPaterno?: string, apellidoMaterno?: string, rut?: string, email?: string},
+ * }} [options]
  */
-export async function generarMatriz(formData, resolvedMedidas, { returnBlob = false } = {}) {
+export async function generarMatriz(formData, resolvedMedidas, options = {}) {
+  const {
+    returnBlob = false,
+    preguntasPorDimension = {},
+    riesgoPorDimension = {},
+    explicacionesPorDimension = {},
+    fechaImplementacionPorDimension = {},
+    responsableMonitoreo = '',
+    dptoResponsable = '',
+    representanteEmpresa = {},
+  } = options;
+
+  // Por defecto, 1 año después de la fecha en que se genera el documento;
+  // se puede sobrescribir por dimensión desde "Ajustar medidas".
+  const fechaImplementacionDefault = formatearFechaLocal(sumarAnios(new Date(), 1));
+  function resolverFechaImplementacion(dimensionId) {
+    const iso = fechaImplementacionPorDimension[dimensionId];
+    return iso ? formatearFechaLocal(parsearFechaISOLocal(iso)) : fechaImplementacionDefault;
+  }
+
   const medidas = resolvedMedidas.map((r, i) => ({
     FolioMedida:           i + 1,
     DimensionMedida:       r.dimensionNombre,
     medidaprescrita:       r.medida,
-    porcentajeriesgomedio: '',
-    porcentajeriesgoalto:  '',
-    preguntasmayorpuntaje: '',
-    'explicación':         '',
-    'Fechaimplementación': '',
+    porcentajeriesgomedio: riesgoPorDimension[r.dimensionId]?.medio ?? '',
+    porcentajeriesgoalto:  riesgoPorDimension[r.dimensionId]?.alto ?? '',
+    preguntasmayorpuntaje: preguntasPorDimension[r.dimensionId] ?? '',
+    'explicación':         explicacionesPorDimension[r.dimensionId] ?? '',
+    'Fechaimplementación': resolverFechaImplementacion(r.dimensionId),
   }));
 
   const response = await fetch(templateUrl);
@@ -45,6 +74,13 @@ export async function generarMatriz(formData, resolvedMedidas, { returnBlob = fa
     apellidomatQF:    formData.apellidomatQF    ?? '',
     rutQF:            formData.rutQF            ?? '',
     emailQF:          formData.emailQF          ?? '',
+    ResponsableMonitoreo: responsableMonitoreo ?? '',
+    DptoResponsable:      dptoResponsable      ?? '',
+    Nombrfirmaempresa: representanteEmpresa.nombre           ?? '',
+    apatQFempresa:     representanteEmpresa.apellidoPaterno  ?? '',
+    amatQFempresa:     representanteEmpresa.apellidoMaterno  ?? '',
+    RutQFempresa:      representanteEmpresa.rut              ?? '',
+    emailQFempresa:    representanteEmpresa.email            ?? '',
     medidas,
   });
 

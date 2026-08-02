@@ -1,4 +1,5 @@
 import { DIMENSIONES, MEDIDAS_POR_DIMENSION, POLITICA_RPSL } from './medidas.js';
+import { sumarAnios, formatearFechaISO } from './fechas.js';
 
 /** @type {import('./medidasSource.js').MedidasSource} */
 export const defaultMedidasSource = {
@@ -14,10 +15,12 @@ export const defaultMedidasSource = {
  * la primera vez que se abre el editor de medidas personalizadas.
  */
 export function crearSnapshotDesdeOficial() {
+  const fechaPorDefecto = formatearFechaISO(sumarAnios(new Date(), 1));
   return {
     medidasPorDimension: Object.fromEntries(
       DIMENSIONES.map((d) => [d.id, (MEDIDAS_POR_DIMENSION[d.id] ?? []).map((m) => ({ ...m }))])
     ),
     politicaRPSL: { ...POLITICA_RPSL },
+    fechasImplementacion: Object.fromEntries(DIMENSIONES.map((d) => [d.id, fechaPorDefecto])),
   };
 }

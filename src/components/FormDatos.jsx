@@ -5,7 +5,7 @@ export default function FormDatos({ datos, onChange }) {
     <div>
       <div className="form-grid">
         <div className="form-group">
-          <label>RUT Empresa <span className="req">*</span></label>
+          <label>RUT Empresa</label>
           <input
             type="text"
             value={datos.rutEmpresa}
@@ -14,7 +14,7 @@ export default function FormDatos({ datos, onChange }) {
           />
         </div>
         <div className="form-group">
-          <label>Razón Social <span className="req">*</span></label>
+          <label>Razón Social</label>
           <input
             type="text"
             value={datos.nombreEmpresa}
@@ -23,7 +23,7 @@ export default function FormDatos({ datos, onChange }) {
           />
         </div>
         <div className="form-group full">
-          <label>Nombre del Centro de Trabajo <span className="req">*</span></label>
+          <label>Nombre del Centro de Trabajo</label>
           <input
             type="text"
             value={datos.nombreCT}
@@ -69,7 +69,7 @@ export default function FormDatos({ datos, onChange }) {
           />
         </div>
         <div className="form-group">
-          <label>Dotación Total <span className="req">*</span></label>
+          <label>Dotación Total</label>
           <input
             type="number"
             value={datos.dotacionTotal}
